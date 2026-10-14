@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Laundry Order Queue</title>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🧺 Laundry Order Queue</h1>
+
+    <p id="status">Loading orders...</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Loads</th>
+                <th>Status</th>
+                <th>Drop-off Time</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody id="ordersTable">
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+
+const API_BASE = 'http://localhost:3000';
+
+const ordersTable = document.getElementById('ordersTable');
+const statusMessage = document.getElementById('status');
+
+const statuses = [
+    "Pending",
+    "Washing",
+    "Ready for Pickup",
+    "Claimed"
+];
+
+async function loadOrders() {
+
+    try {
+
+        statusMessage.textContent = "Loading orders...";
+
+        const response = await fetch(`${API_BASE}/orders`);
+
+        if (!response.ok) {
+            throw new Error("Failed to load orders");
+        }
+
+        const orders = await response.json();
+
+        renderOrders(orders);
+
+        statusMessage.textContent =
+            `${orders.length} order(s) currently in queue.`;
+
+    } catch (error) {
+
+        console.error(error);
+
+        statusMessage.textContent =
+            "Unable to connect to the laundry API.";
+
+    }
+}
+
+function renderOrders(orders) {
+
+    ordersTable.innerHTML = '';
+
+    if (orders.length === 0) {
+
+        ordersTable.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty">
+                    No orders in the queue.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    orders.forEach(order => {
+
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+            <td>${order.id}</td>
+
+            <td>${order.customerName}</td>
+
+            <td>${order.loadCount}</td>
+
+            <td>
+                <select onchange="updateStatus(${order.id}, this.value)">
+
+                    ${statuses.map(status => `
+                        <option
+                            value="${status}"
+                            ${order.status === status ? 'selected' : ''}
+                        >
+                            ${status}
+                        </option>
+                    `).join('')}
+
+                </select>
+            </td>
+
+            <td>${order.dropOffTime}</td>
+
+            <td>
+                <button onclick="cancelOrder(${order.id})">
+                    Cancel
+                </button>
+            </td>
+        `;
+
+        ordersTable.appendChild(row);
+    });
+}
+
+async function updateStatus(id, newStatus) {
+
+    try {
+
+        const response = await fetch(`${API_BASE}/orders/${id}`, {
+
+            method: 'PUT',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+                status: newStatus
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to update order");
+        }
+
+        statusMessage.textContent =
+            `Order #${id} updated to "${newStatus}".`;
+
+        await loadOrders();
+
+    } catch (error) {
+
+        console.error(error);
+
+        statusMessage.textContent =
+            "Failed to update order.";
+
+    }
+}
+
+async function cancelOrder(id) {
+
+    const confirmed = confirm(
+        `Are you sure you want to cancel order #${id}?`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(`${API_BASE}/orders/${id}`, {
+
+            method: 'DELETE'
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to cancel order");
+        }
+
+        statusMessage.textContent =
+            data.message;
+
+        await loadOrders();
+
+    } catch (error) {
+
+        console.error(error);
+
+        statusMessage.textContent =
+            "Failed to cancel order.";
+
+    }
+}
+
+loadOrders();
+
+</script>
+
+</body>
+</html>

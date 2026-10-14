@@ -1,0 +1,30 @@
+# Laundry API Documentation
+
+Base URL:
+
+http://localhost:3000
+
+---
+
+## GET /orders
+
+### Description
+
+Returns all current laundry orders.
+
+### Body
+
+No request body is required.
+
+### Example Response
+
+```json
+[
+    {
+        "id": 1,
+        "customerName": "Maria Santos",
+        "loadCount": 2,
+        "status": "Pending",
+        "dropOffTime": "8:00 AM"
+    }
+]
